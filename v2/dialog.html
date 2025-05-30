@@ -1,0 +1,22 @@
+<head>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%233c3' stroke='%23000' stroke-width='4'/%3E%3Cellipse cx='24' cy='28' rx='4' ry='7' fill='%23000'/%3E%3Cellipse cx='40' cy='28' rx='4' ry='7' fill='%23000'/%3E%3Cellipse cx='32' cy='44' rx='10' ry='6' fill='%23222'/%3E%3C/svg%3E">
+</head>
+<div id="gameDialog" style="display:flex;">
+  <div id="dialogBox" style="display:flex;flex-direction:row;gap:32px;align-items:stretch;">
+    <div id="dialogLeft" style="flex:1;min-width:220px;display:flex;flex-direction:column;justify-content:center;">
+      <div id="dialogMessage">Velkommen til Daves Zombie Slash!<br>Brug WASD/piletaster til at bevæge dig og musen til at skyde.</div>
+      <button id="startBtn">Start spillet</button>
+      <button id="restartBtn" style="display:none;">Genstart spil</button>
+      <button id="nextLevelBtn" style="display:none;margin-top:24px;font-size:1em;padding:10px 32px;border-radius:8px;border:none;background:#3c3;color:#fff;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px #0006;transition:background 0.2s;">Næste level</button>
+    </div>
+    <div id="dialogRight" style="flex:1;min-width:220px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+      <h3>Butik</h3>
+      <div id="shopXP" style="margin-bottom:10px;font-size:1.1em;"></div>
+      <button id="buyMG" style="margin:8px 0;padding:10px 24px;">Maskingevær<br><span style='font-size:0.8em'>(hurtigere skud, 100 XP)</span></button>
+      <button id="buySG" style="margin:8px 0;padding:10px 24px;">Shotgun<br><span style='font-size:0.8em'>(kraftigere skud, 150 XP)</span></button>
+      <button id="buyBZ" style="margin:8px 0;padding:10px 24px;">Bazooka<br><span style='font-size:0.8em'>(eksplosiv, 300 XP)</span></button>
+      <div id="weaponSelect" style="margin-top:16px;"></div>
+      <div id="shopMsg" style="margin-top:10px;color:#ff8;"></div>
+    </div>
+  </div>
+</div>

@@ -30,16 +30,157 @@ window.addEventListener('keydown', e => state.keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => state.keys[e.key.toLowerCase()] = false);
 window.addEventListener('mousedown', shoot);
 
+let weapon = 'pistol'; // pistol, mg, sg, bz
+let ownedWeapons = ['pistol']; // Liste over købte våben
+
+window.setupShop = function() {
+  const shopXP = document.getElementById('shopXP');
+  const shopMsg = document.getElementById('shopMsg');
+  const mgBtn = document.getElementById('buyMG');
+  const sgBtn = document.getElementById('buySG');
+  const bzBtn = document.getElementById('buyBZ');
+  const weaponSelect = document.getElementById('weaponSelect');
+  function updateShop() {
+    const total = totalXP + state.hero.xp;
+    shopXP.innerHTML = `XP: <b>${total}</b><br>Våben: <b>${weaponNavn(weapon)}</b>`;
+    mgBtn.disabled = ownedWeapons.includes('mg') || total < 100;
+    sgBtn.disabled = ownedWeapons.includes('sg') || total < 150;
+    bzBtn.disabled = ownedWeapons.includes('bz') || total < 300;
+    // Opdater våbenvælger
+    if (weaponSelect) {
+      weaponSelect.innerHTML = '';
+      ownedWeapons.forEach(w => {
+        const btn = document.createElement('button');
+        btn.textContent = weaponNavn(w);
+        btn.disabled = weapon === w;
+        btn.onclick = () => {
+          weapon = w;
+          updateShop();
+        };
+        weaponSelect.appendChild(btn);
+      });
+    }
+  }
+  function weaponNavn(w) {
+    if (w==='mg') return 'Maskingevær';
+    if (w==='sg') return 'Shotgun';
+    if (w==='bz') return 'Bazooka';
+    return 'Pistol';
+  }
+  if (mgBtn) mgBtn.onclick = function() {
+    const total = totalXP + state.hero.xp;
+    if (total >= 100 && !ownedWeapons.includes('mg')) {
+      brugXP(100);
+      ownedWeapons.push('mg');
+      weapon = 'mg';
+      shopMsg.innerText = 'Maskingevær købt!';
+      updateShop();
+    }
+  };
+  if (sgBtn) sgBtn.onclick = function() {
+    const total = totalXP + state.hero.xp;
+    if (total >= 150 && !ownedWeapons.includes('sg')) {
+      brugXP(150);
+      ownedWeapons.push('sg');
+      weapon = 'sg';
+      shopMsg.innerText = 'Shotgun købt!';
+      updateShop();
+    }
+  };
+  if (bzBtn) bzBtn.onclick = function() {
+    const total = totalXP + state.hero.xp;
+    if (total >= 300 && !ownedWeapons.includes('bz')) {
+      brugXP(300);
+      ownedWeapons.push('bz');
+      weapon = 'bz';
+      shopMsg.innerText = 'Bazooka købt!';
+      updateShop();
+    }
+  };
+  function brugXP(amount) {
+    // Brug XP fra hero først, så fra totalXP
+    if (state.hero.xp >= amount) {
+      state.hero.xp -= amount;
+    } else {
+      const rest = amount - state.hero.xp;
+      state.hero.xp = 0;
+      totalXP -= rest;
+    }
+  }
+  updateShop();
+};
+
 function shoot(e) {
   if (state.gameOver || state.bossDefeated) return;
   const angle = Math.atan2(e.clientY - state.hero.y, e.clientX - state.hero.x);
-  state.bullets.push({
-    x: state.hero.x,
-    y: state.hero.y,
-    dx: Math.cos(angle) * 10,
-    dy: Math.sin(angle) * 10,
-    size: 8
-  });
+  if (weapon === 'mg') {
+    // Maskingevær: hurtigere skud (skyder 3 kugler hurtigt)
+    for (let i=0;i<3;i++) {
+      setTimeout(()=>{
+        state.bullets.push({
+          x: state.hero.x,
+          y: state.hero.y,
+          dx: Math.cos(angle) * 12,
+          dy: Math.sin(angle) * 12,
+          size: 7
+        });
+      }, i*60);
+    }
+  } else if (weapon === 'sg') {
+    // Shotgun: 5 kugler i vifte
+    for (let i=-2;i<=2;i++) {
+      const spread = angle + i*0.15;
+      state.bullets.push({
+        x: state.hero.x,
+        y: state.hero.y,
+        dx: Math.cos(spread) * 10,
+        dy: Math.sin(spread) * 10,
+        size: 10
+      });
+    }
+  } else if (weapon === 'bz') {
+    // Bazooka: én stor kugle
+    state.bullets.push({
+      x: state.hero.x,
+      y: state.hero.y,
+      dx: Math.cos(angle) * 8,
+      dy: Math.sin(angle) * 8,
+      size: 22,
+      bazooka: true
+    });
+  } else {
+    // Pistol
+    state.bullets.push({
+      x: state.hero.x,
+      y: state.hero.y,
+      dx: Math.cos(angle) * 10,
+      dy: Math.sin(angle) * 10,
+      size: 8
+    });
+  }
+}
+
+let currentLevel = 1;
+const maxLevel = 5;
+let totalXP = 0;
+
+function nextLevel() {
+  if (currentLevel < maxLevel) {
+    totalXP += state.hero.xp;
+    currentLevel++;
+    state.hero = { x: 400, y: 300, size: 32, hp: 100, speed: 4, xp: 0, level: currentLevel };
+    state.zombies = [];
+    state.boss = null;
+    state.bullets = [];
+    state.gameOver = false;
+    state.bossDefeated = false;
+    state.spawnTimer = 0;
+    state.bossSpawned = false;
+    gameStarted = true;
+    hideDialog();
+    // Opdater shop efter XP er lagt til
+    if (window.setupShop) window.setupShop();
+  }
 }
 
 function spawnZombie() {
@@ -50,11 +191,20 @@ function spawnZombie() {
   else if (edge === 1) { x = canvas.width; y = Math.random() * canvas.height; }
   else if (edge === 2) { x = Math.random() * canvas.width; y = 0; }
   else { x = Math.random() * canvas.width; y = canvas.height; }
-  state.zombies.push({ x, y, size: 28, hp: 20, speed: 1.5 + Math.random(), xp: 10 });
+  // Gør zombier sværere pr. level
+  const baseSpeed = 1.5 + Math.random() + (currentLevel-1)*0.5;
+  const baseHp = 20 + (currentLevel-1)*10;
+  const baseXp = 10 + (currentLevel-1)*5;
+  state.zombies.push({ x, y, size: 28, hp: baseHp, speed: baseSpeed, xp: baseXp });
 }
 
 function spawnBoss() {
-  state.boss = { x: canvas.width/2, y: 80, size: 80, hp: 300, speed: 2, xp: 200 };
+  if (currentLevel < maxLevel) {
+    state.boss = { x: canvas.width/2, y: 80, size: 80, hp: 300 + (currentLevel-1)*100, speed: 2 + (currentLevel-1)*0.5, xp: 200 + (currentLevel-1)*50 };
+  } else {
+    // Superboss på level 5
+    state.boss = { x: canvas.width/2, y: 80, size: 120, hp: 1000, speed: 3, xp: 1000 };
+  }
   state.bossSpawned = true;
 }
 
@@ -124,7 +274,16 @@ function update() {
     for (let z of state.zombies) {
       let dist = Math.hypot(b.x-z.x, b.y-z.y);
       if (dist < (b.size+z.size)/2) {
-        z.hp -= 20;
+        if (b.bazooka) {
+          // Bazooka: splash damage
+          for (let z2 of state.zombies) {
+            let d2 = Math.hypot(b.x-z2.x, b.y-z2.y);
+            if (d2 < 60) {
+              z2.hp -= 60;
+            }
+          }
+        }
+        z.hp -= b.bazooka ? 60 : (b.size >= 10 ? 35 : 20);
         b.x = -1000; // Fjern bullet
         if (z.hp <= 0) {
           state.hero.xp += z.xp;
@@ -191,21 +350,38 @@ function draw() {
 let firstStart = true;
 let gameStarted = false;
 
-function showDialog(message, showStart = false) {
+function showDialog(message, showStart = false, showNext = false) {
   const dialog = document.getElementById('gameDialog');
   const msg = document.getElementById('dialogMessage');
   const startBtn = document.getElementById('startBtn');
   const restartBtn = document.getElementById('restartBtn');
+  const nextBtn = document.getElementById('nextLevelBtn');
+  if (nextBtn) {
+    nextBtn.onclick = nextLevel;
+  }
+  let extra = '';
+  if (!showStart) {
+    const total = totalXP + state.hero.xp;
+    extra = `<br><span style='font-size:0.7em;'>Din XP: <b>${total}</b></span>`;
+  }
   if (dialog && msg && startBtn && restartBtn) {
-    msg.innerHTML = message;
+    msg.innerHTML = message + extra;
     dialog.style.display = 'flex';
     if (showStart) {
       startBtn.style.display = '';
       restartBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
+    } else if (showNext) {
+      startBtn.style.display = 'none';
+      restartBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = '';
     } else {
       startBtn.style.display = 'none';
       restartBtn.style.display = '';
+      if (nextBtn) nextBtn.style.display = 'none';
     }
+    // Opdater shop hver gang dialogen vises
+    if (window.setupShop) window.setupShop();
   }
 }
 
@@ -215,7 +391,8 @@ function hideDialog() {
 }
 
 function startGame() {
-  // Nulstil state VED start (ikke kun ved restart)
+  currentLevel = 1;
+  totalXP = 0;
   state.hero = { x: 400, y: 300, size: 32, hp: 100, speed: 4, xp: 0, level: 1 };
   state.zombies = [];
   state.boss = null;
@@ -229,7 +406,8 @@ function startGame() {
 }
 
 function restartGame() {
-  // Nulstil state
+  currentLevel = 1;
+  totalXP = 0;
   state.hero = { x: 400, y: 300, size: 32, hp: 100, speed: 4, xp: 0, level: 1 };
   state.zombies = [];
   state.boss = null;
@@ -247,9 +425,9 @@ window.startGame = startGame;
 window.restartGame = restartGame;
 
 function drawHUD() {
-  // Kun point og status i #hud
   const hudElem = document.getElementById('hud');
-  hudElem.innerHTML = `HP: ${Math.max(0,Math.round(state.hero.hp))} | XP: ${state.hero.xp}`;
+  const total = totalXP + state.hero.xp;
+  hudElem.innerHTML = `Level: ${currentLevel} | HP: ${Math.max(0,Math.round(state.hero.hp))} | XP: ${total}`;
 }
 
 function gameLoop() {
@@ -259,7 +437,11 @@ function gameLoop() {
     drawHUD();
     if (state.bossDefeated) {
       gameStarted = false;
-      showDialog('DU VANDT!', false);
+      if (currentLevel < maxLevel) {
+        showDialog(`Level ${currentLevel} gennemført!`, false, true);
+      } else {
+        showDialog('DU VANDT! (Superboss besejret)', false, false);
+      }
     } else if (state.gameOver) {
       gameStarted = false;
       showDialog('GAME OVER', false);
